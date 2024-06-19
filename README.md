@@ -34,7 +34,7 @@ arguments:
     [database dir]     the directory that contains all the databases and test suites
     [table file]       table.json file which includes foreign key info of each database.
     [evaluation type]  "exec" for test suite accuracy (default), "match" for the original exact set match accuracy, and "all" for both
-    --plug_value       whether to plug in the gold value into the predicted query; suitable if your model does not predict values.
+    --plug_value       whether to plug in the gold value into the predicted query; suitable if your model does not predict values. 
     --keep_distinct    whether to keep distinct keyword during evaluation. default is false.
     --progress_bar_for_each_datapoint   whether to print progress bar of running test inputs for each datapoint
 ```

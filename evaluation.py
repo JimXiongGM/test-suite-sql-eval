@@ -23,6 +23,7 @@ import os
 import json
 import sqlite3
 import argparse
+from tqdm import tqdm
 
 from process_sql import get_schema, Schema, get_sql
 from exec_eval import eval_exec_match
@@ -447,11 +448,23 @@ def print_formated_s(row_name, l, element_format):
     print(template.format(row_name, *l))
 
 
-def print_scores(scores, etype, include_turn_acc=True):
-    turns = ['turn 1', 'turn 2', 'turn 3', 'turn 4', 'turn > 4']
+def return_scores(scores):
+    """
+    return json instead of printing. no partial_types.
+    """
     levels = ['easy', 'medium', 'hard', 'extra', 'all']
-    if include_turn_acc:
-        levels.append('joint_all')
+    execution_scores = {}
+    exact_match_scores = {}
+    for level in levels:
+        execution_scores[level] = scores[level]['exec']
+        exact_match_scores[level] = scores[level]['exact']
+    return execution_scores, exact_match_scores
+
+def print_scores(scores, etype, include_turn_acc=True):
+    # turns = ['turn 1', 'turn 2', 'turn 3', 'turn 4', 'turn > 4']
+    levels = ['easy', 'medium', 'hard', 'extra', 'all']
+    # if include_turn_acc:
+    #     levels.append('joint_all')
     partial_types = ['select', 'select(no AGG)', 'where', 'where(no OP)', 'group(no Having)',
                      'group', 'order', 'and/or', 'IUEN', 'keywords']
 
@@ -468,37 +481,37 @@ def print_scores(scores, etype, include_turn_acc=True):
         print ('\n====================== EXACT MATCHING ACCURACY =====================')
         exact_scores = [scores[level]['exact'] for level in levels]
         print_formated_s("exact match", exact_scores, '{:<20.3f}')
-        print ('\n---------------------PARTIAL MATCHING ACCURACY----------------------')
-        for type_ in partial_types:
-            this_scores = [scores[level]['partial'][type_]['acc'] for level in levels]
-            print_formated_s(type_, this_scores, '{:<20.3f}')
+        # print ('\n---------------------PARTIAL MATCHING ACCURACY----------------------')
+        # for type_ in partial_types:
+        #     this_scores = [scores[level]['partial'][type_]['acc'] for level in levels]
+        #     print_formated_s(type_, this_scores, '{:<20.3f}')
 
-        print ('---------------------- PARTIAL MATCHING RECALL ----------------------')
-        for type_ in partial_types:
-            this_scores = [scores[level]['partial'][type_]['rec'] for level in levels]
-            print_formated_s(type_, this_scores, '{:<20.3f}')
+        # print ('---------------------- PARTIAL MATCHING RECALL ----------------------')
+        # for type_ in partial_types:
+        #     this_scores = [scores[level]['partial'][type_]['rec'] for level in levels]
+        #     print_formated_s(type_, this_scores, '{:<20.3f}')
 
-        print ('---------------------- PARTIAL MATCHING F1 --------------------------')
-        for type_ in partial_types:
-            this_scores = [scores[level]['partial'][type_]['f1'] for level in levels]
-            print_formated_s(type_, this_scores, '{:<20.3f}')
+        # print ('---------------------- PARTIAL MATCHING F1 --------------------------')
+        # for type_ in partial_types:
+        #     this_scores = [scores[level]['partial'][type_]['f1'] for level in levels]
+        #     print_formated_s(type_, this_scores, '{:<20.3f}')
 
-    if include_turn_acc:
-        print()
-        print()
-        print_formated_s("", turns, '{:20}')
-        counts = [scores[turn]['count'] for turn in turns]
-        print_formated_s("count", counts, "{:<20d}")
+    # if include_turn_acc:
+    #     print()
+    #     print()
+    #     print_formated_s("", turns, '{:20}')
+    #     counts = [scores[turn]['count'] for turn in turns]
+    #     print_formated_s("count", counts, "{:<20d}")
 
-        if etype in ["all", "exec"]:
-            print ('=====================   TURN EXECUTION ACCURACY     =====================')
-            exec_scores = [scores[turn]['exec'] for turn in turns]
-            print_formated_s("execution", exec_scores, '{:<20.3f}')
+    #     if etype in ["all", "exec"]:
+    #         print ('=====================   TURN EXECUTION ACCURACY     =====================')
+    #         exec_scores = [scores[turn]['exec'] for turn in turns]
+    #         print_formated_s("execution", exec_scores, '{:<20.3f}')
 
-        if etype in ["all", "match"]:
-            print ('\n====================== TURN EXACT MATCHING ACCURACY =====================')
-            exact_scores = [scores[turn]['exact'] for turn in turns]
-            print_formated_s("exact match", exact_scores, '{:<20.3f}')
+    #     if etype in ["all", "match"]:
+    #         print ('\n====================== TURN EXACT MATCHING ACCURACY =====================')
+    #         exact_scores = [scores[turn]['exact'] for turn in turns]
+    #         print_formated_s("exact match", exact_scores, '{:<20.3f}')
 
 
 def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, progress_bar_for_each_datapoint):
@@ -522,7 +535,7 @@ def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, pro
 
     # spider formatting indicates that there is only one "single turn"
     # do not report "turn accuracy" for SPIDER
-    include_turn_acc = len(glist) > 1
+    # include_turn_acc = len(glist) > 1
 
     with open(predict) as f:
         plist = []
@@ -537,6 +550,8 @@ def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, pro
         if len(pseq_one) != 0:
             plist.append(pseq_one)
 
+    # if len(plist) == 1:
+    #     plist, glist = plist[0], glist[0]
     assert len(plist) == len(glist), "number of sessions must equal"
 
     evaluator = Evaluator()
@@ -563,7 +578,7 @@ def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, pro
             print('Evaluating %dth prediction (%.2f%%)' % (i + 1, (i + 1) / len(plist) * 100))
         scores['joint_all']['count'] += 1
         turn_scores = {"exec": [], "exact": []}
-        for idx, pg in enumerate(zip(p, g)):
+        for idx, pg in enumerate(tqdm(zip(p, g),desc = "Evaluating", total=len(p), colour='green',ncols=100)):
             p, g = pg
             p_str = p[0]
             p_str = p_str.replace("value", "1")
@@ -585,7 +600,7 @@ def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, pro
             try:
                 p_sql = get_sql(schema, p_str)
             except:
-                # If p_sql is not valid, then we will use an empty sql to evaluate with the correct sql
+                # If predict_sql_structure is not valid, then we will use an empty sql to evaluate with the correct sql
                 p_sql = {
                 "except": None,
                 "from": {
@@ -629,9 +644,9 @@ def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, pro
                 partial_scores = evaluator.partial_scores
                 if exact_score == 0:
                     turn_scores['exact'].append(0)
-                    print("{} pred: {}".format(hardness, p_str))
-                    print("{} gold: {}".format(hardness, g_str))
-                    print("")
+                    # print("{} pred: {}".format(hardness, p_str))
+                    # print("{} gold: {}".format(hardness, g_str))
+                    # print("")
                 else:
                     turn_scores['exact'].append(1)
                 scores[turn_id]['exact'] += exact_score
@@ -702,7 +717,11 @@ def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, pro
                         2.0 * scores[level]['partial'][type_]['acc'] * scores[level]['partial'][type_]['rec'] / (
                         scores[level]['partial'][type_]['rec'] + scores[level]['partial'][type_]['acc'])
 
-    print_scores(scores, etype, include_turn_acc=include_turn_acc)
+    # print_scores(scores, etype, include_turn_acc=False)
+    execution_scores, exact_match_scores = return_scores(scores)
+    print("Execution Scores: ", execution_scores)
+    print("Exact Match Scores: ", exact_match_scores)
+    return execution_scores, exact_match_scores
 
 
 # Rebuild SQL functions for value evaluation
