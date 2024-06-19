@@ -560,7 +560,7 @@ def evaluate(gold, predict, db_dir, etype, kmaps, plug_value, keep_distinct, pro
 
     for i, (p, g) in enumerate(zip(plist, glist)):
         if (i + 1) % 10 == 0:
-            print('Evaluating %dth prediction' % (i + 1))
+            print('Evaluating %dth prediction (%.2f%%)' % (i + 1, (i + 1) / len(plist) * 100))
         scores['joint_all']['count'] += 1
         turn_scores = {"exec": [], "exact": []}
         for idx, pg in enumerate(zip(p, g)):

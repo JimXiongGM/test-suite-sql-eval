@@ -25,9 +25,11 @@ Below is the example command to calculate the test suite accuracy for developmen
 ```
 python3 evaluation.py --gold [gold file] --pred [predicted file] --etype [evaluation type] --db [database dir] --table [table file] --plug_value --keep_distinct --progress_bar_for_each_datapoint
 
+python evaluation.py --gold evaluation_examples/gold.txt --pred evaluation_examples/predict.txt --db database/ --table table.json --etype all --progress_bar_for_each_datapoint
+```
 
 arguments:
-     [gold file]       gold file where each line is `a gold SQL \t db_id` for Spider, SParC, and CoSQL, and interactions are seperated by one empty line for SParC and CoSQL. See an example at evaluation_examples/gold.txt
+    [gold file]       gold file where each line is `a gold SQL \t db_id` for Spider, SParC, and CoSQL, and interactions are seperated by one empty line for SParC and CoSQL. See an example at evaluation_examples/gold.txt
     [predicted file]   predicted sql file where each line is a predicted SQL, and interactions are seperated by one empty line. See an example at evaluation_examples/predict.txt
     [database dir]     the directory that contains all the databases and test suites
     [table file]       table.json file which includes foreign key info of each database.
